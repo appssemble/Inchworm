@@ -8,22 +8,22 @@
 
 import UIKit
 
-fileprivate let scaleBarNumber = 41
-fileprivate let majorScaleBarNumber = 5
-fileprivate let scaleWidth: CGFloat = 1
-fileprivate let pointerWidth: CGFloat = 1
-fileprivate let dotWidth: CGFloat = 6
-
 protocol SlideRulerDelegate {
     func didGetOffsetRatio(from slideRuler: SlideRuler, offsetRatio: CGFloat)
 }
 
-class SlideRuler: UIView {
-    
+public class SlideRuler: UIView {
     let pointer = CALayer()
     let centralDot = CAShapeLayer()
     let slider = UIScrollView()
-    var sliderOffsetRatio: CGFloat = 0.5
+    
+    public static var sliderOffsetRatio: CGFloat = 0.5
+    public static var scaleBarNumber = 41
+    public static var majorScaleBarNumber = 5
+    public static var scaleWidth: CGFloat = 1
+    public static var pointerWidth: CGFloat = 1
+    public static var dotWidth: CGFloat = 6
+    public static var autoSnapToCenter = false
     
     let scaleBarLayer: CAReplicatorLayer = {
         var r = CAReplicatorLayer()
@@ -41,7 +41,7 @@ class SlideRuler: UIView {
     var reset = false
     var offsetValue: CGFloat = 0
     
-    override var bounds: CGRect {
+    override public var bounds: CGRect {
         didSet {
             setUIFrames()
         }
@@ -73,7 +73,7 @@ class SlideRuler: UIView {
     public func setUIFrames() {
         slider.frame = bounds
 
-        offsetValue = sliderOffsetRatio * slider.frame.width
+        offsetValue = SlideRuler.sliderOffsetRatio * slider.frame.width
         slider.delegate = nil
         slider.contentSize = CGSize(width: frame.width * 2, height: frame.height)
         slider.contentOffset = CGPoint(x: offsetValue, y: 0)
@@ -81,20 +81,20 @@ class SlideRuler: UIView {
         perform(#selector(setSliderDelegate), with: nil, afterDelay: 0.1)
         // slider.delegate = self
 
-        pointer.frame = CGRect(x: (frame.width / 2 - pointerWidth / 2), y: bounds.origin.y, width: pointerWidth, height: frame.height)
+        pointer.frame = CGRect(x: (frame.width / 2 - SlideRuler.pointerWidth / 2), y: bounds.origin.y, width: SlideRuler.pointerWidth, height: frame.height)
         
-        centralDot.frame = CGRect(x: frame.width - dotWidth / 2, y: frame.height * 0.2, width: dotWidth, height: dotWidth)
+        centralDot.frame = CGRect(x: frame.width - SlideRuler.dotWidth / 2, y: frame.height * 0.2, width: SlideRuler.dotWidth, height: SlideRuler.dotWidth)
         centralDot.path = UIBezierPath(ovalIn: centralDot.bounds).cgPath
         
         scaleBarLayer.frame = CGRect(x: frame.width / 2, y: 0.6 * frame.height, width: frame.width, height: 0.4 * frame.height)
-        scaleBarLayer.instanceTransform = CATransform3DMakeTranslation((frame.width - scaleWidth) / CGFloat((scaleBarNumber - 1)) , 0, 0)
+        scaleBarLayer.instanceTransform = CATransform3DMakeTranslation((frame.width - SlideRuler.scaleWidth) / CGFloat((SlideRuler.scaleBarNumber - 1)) , 0, 0)
 
         scaleBarLayer.sublayers?.forEach {
             $0.frame = CGRect(x: 0, y: 0, width: 1, height: scaleBarLayer.frame.height)
         }
         
         majorScaleBarLayer.frame = scaleBarLayer.frame
-        majorScaleBarLayer.instanceTransform = CATransform3DMakeTranslation((frame.width - scaleWidth) / CGFloat((majorScaleBarNumber - 1)) , 0, 0)
+        majorScaleBarLayer.instanceTransform = CATransform3DMakeTranslation((frame.width - SlideRuler.scaleWidth) / CGFloat((SlideRuler.majorScaleBarNumber - 1)) , 0, 0)
         
         majorScaleBarLayer.sublayers?.forEach {
             $0.frame = CGRect(x: 0, y: 0, width: 1, height: majorScaleBarLayer.frame.height)
@@ -177,16 +177,27 @@ class SlideRuler: UIView {
 
 extension SlideRuler: UIScrollViewDelegate {
     
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         checkCentralDotHiddenStatus()
+        if SlideRuler.autoSnapToCenter {
+            let offset = CGPoint(x: frame.width / 2, y: 0)
+            scrollView.setContentOffset(offset, animated: false)
+        }
     }
     
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+    public func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
+        if SlideRuler.autoSnapToCenter {
+            let offset = CGPoint(x: frame.width / 2, y: 0)
+            scrollView.setContentOffset(offset, animated: false)
+        }
+    }
+    
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         centralDot.isHidden = false
         
         let speed = scrollView.panGestureRecognizer.velocity(in: scrollView.superview)
         
-        let limit = frame.width / CGFloat((scaleBarNumber - 1) * 2)
+        let limit = frame.width / CGFloat((SlideRuler.scaleBarNumber - 1) * 2)
         if abs(slider.contentOffset.x - frame.width / 2) < limit && abs(speed.x) < 10.0 {
             if !reset {
                 reset = true
@@ -205,7 +216,7 @@ extension SlideRuler: UIScrollViewDelegate {
         delegate?.didGetOffsetRatio(from: self, offsetRatio: offsetRatio)
         
         if scrollView.frame.width > 0 {
-            sliderOffsetRatio = scrollView.contentOffset.x / scrollView.frame.width
+            SlideRuler.sliderOffsetRatio = scrollView.contentOffset.x / scrollView.frame.width
         }
     }
 }
